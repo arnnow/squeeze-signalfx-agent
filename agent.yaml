@@ -1,0 +1,7 @@
+globalDimensions: {"env":"ENVIRONMENT","sfx_monitored":SFXMONITORED}
+logging: {"level":"info"}
+monitors: [{"#from":"/etc/signalfx/conf.d/*.yaml","flatten":true,"optional":true}]
+observers: [{"type":"host"}]
+signalFxAccessToken: "TOKEN"
+signalFxRealm: "eu0"
+

@@ -1,0 +1,133 @@
+#!/bin/sh
+### BEGIN INIT INFO
+# Provides: signalfx-agent
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: SignalFx Agent
+# Description:
+#  The SignalFx Agent offers the ability to discover and collect metrics about
+#  the host and services running on the host.
+### END INIT INFO
+
+# This sysv init script only works on Debian systems due to the use of
+# start-stop-daemon.  We don't support any RHEL based systems that still use
+# sysv, as they all use either upstart (e.g. centos6/amazon) or systemd.
+
+dir="/opt/signalfx-agent"
+cmd="/opt/signalfx-agent/bin/signalfx-agent"
+user="signalfx"
+group="signalfx"
+rundir="/var/run/signalfx-agent"
+
+name="signalfx-agent"
+pidfile="/var/run/$name.pid"
+logfile="/var/log/$name.log"
+
+# Read configuration variable file if it is present
+[ -r /etc/default/$name ] && . /etc/default/$name
+
+get_pid() {
+    cat "$pidfile"
+}
+
+is_running() {
+  process=`ps auxfw | grep "/opt/signalfx-agent/bin/signalfx-agent" | grep -v grep | wc -l`
+  if [ "x$process" = "x1" ]
+  then
+        CODE=0
+  else
+        CODE=2
+  fi
+  return $CODE
+}
+
+case "$1" in
+    start)
+    if is_running; then
+        echo "Already started"
+    else
+        echo "Starting $name"
+
+        mkdir -p "$rundir"
+        chown -R $user "$rundir"
+        chmod 0755 "$rundir"
+
+        touch $logfile
+        chown $user $logfile
+
+        start-stop-daemon --start \
+          --startas /bin/sh \
+          --pidfile $pidfile \
+          --name $name \
+          --user $user \
+          --chuid $user \
+          --group $group \
+          --background \
+          --make-pidfile \
+          -- -c "exec $cmd >> $logfile 2>&1"
+
+        for i in 0 1 2 3 4 5 6 7 8 9; do
+          is_running && break
+          sleep 1
+        done
+
+        if is_running; then
+          echo "Started.  Logs will go to $logfile"
+          exit 0
+        else
+          echo "Failed to start, see $logfile"
+          exit 1
+        fi
+    fi
+    ;;
+
+    stop)
+    if is_running; then
+        echo -n "Stopping $name.."
+
+        start-stop-daemon --stop \
+          --pidfile $pidfile \
+          --name $name \
+          --user $user \
+          --retry 10
+
+        if is_running; then
+          echo "Failed to stop"
+          exit 1
+        else
+          echo "Stopped"
+        fi
+    else
+        echo "Not running"
+    fi
+
+    rm -f "$pidfile"
+    ;;
+
+    restart)
+    $0 stop
+    if is_running; then
+        echo "Unable to stop, will not attempt to start"
+        exit 1
+    fi
+    $0 start
+    ;;
+
+    status)
+      if is_running; then
+        echo "Running with pid `get_pid`"
+      else
+        echo "Not running"
+        exit 1
+      fi
+    ;;
+
+    *)
+    echo "Usage: $0 {start|stop|restart|status}"
+    exit 1
+    ;;
+esac
+
+exit 0

@@ -1,0 +1,10 @@
+- type: cpu
+- type: filesystems
+  extraGroups:
+    - inodes
+- type: disk-io
+- type: net-io
+- type: load
+  perCPU: true
+- type: memory
+- type: vmem
