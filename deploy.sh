@@ -9,7 +9,7 @@ usage() {
   * sfx_monitored: true or false - for agent dimension" 
 } 
 
-if [ $# -lt 3 ] 
+if [ $# -lt 4 ] 
 then     
   usage     
   exit 1 
